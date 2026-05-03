@@ -15,6 +15,26 @@ This skill diagnoses performance problems in existing Angular applications and p
 
 Follow these phases in order. Do not skip measurement.
 
+### Phase 0 — Detect Angular Version
+
+The Angular version determines which diagnostic paths apply. Check before diagnosing:
+
+```bash
+# Angular version
+cat package.json | grep '"@angular/core"'
+
+# Zone mode: if zone.js appears in polyfills, the app is zone-based
+grep -A5 '"polyfills"' angular.json
+```
+
+| Version | Change detection default | Zone mode |
+|---------|--------------------------|-----------|
+| v20 and earlier | Default (full tree check) | Zone-based |
+| v21 | Default (full tree check) | Zoneless (new projects) |
+| v22+ | OnPush | Zoneless |
+
+Record the version before proceeding — it determines which checks in Phase 2 and Phase 4 apply.
+
 ### Phase 1 — Measure
 
 Establish baseline CWV values before looking at code:
@@ -41,10 +61,11 @@ Once you know which metric fails, use the targeted diagnostic path:
 Read [audit-cwv.md](references/audit-cwv.md) → LCP section.
 
 **INP > 200 ms**
-- Default change detection strategy on most components? → Audit for `OnPush`
 - Heavy synchronous event handlers? → Profile with DevTools, yield to scheduler
-- Third-party event-heavy libraries inside Angular's zone? → `runOutsideAngular`
-- New project? → Evaluate zoneless Angular
+- v20 and earlier — Default CD on most components? → Audit for `OnPush`
+- v20 and earlier — Third-party libraries triggering unexpected CD? → `runOutsideAngular`
+- v20 and earlier — Zone-based app? → Evaluate migration to zoneless
+- v22+ — OnPush is the default; audit for signals anti-patterns instead
 
 Read [audit-rendering.md](references/audit-rendering.md).
 
@@ -76,7 +97,8 @@ Look for:
 Read [audit-rendering.md](references/audit-rendering.md).
 
 - Open Angular DevTools → Profiler → record an interaction
-- List components with Default change detection strategy
+- v20 and earlier — List components with Default change detection strategy
+- v22+ — OnPush is the default; skip the Default strategy search
 - Identify `effect()` calls that should be `computed()`
 - Find subscriptions missing `takeUntilDestroyed()`
 
