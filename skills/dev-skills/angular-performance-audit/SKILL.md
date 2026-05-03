@@ -15,25 +15,23 @@ This skill diagnoses performance problems in existing Angular applications and p
 
 Follow these phases in order. Do not skip measurement.
 
-### Phase 0 — Detect Angular Version
+### Phase 0 — Detect App Configuration
 
-The Angular version determines which diagnostic paths apply. Check before diagnosing:
+Establish the app's current configuration before diagnosing. This determines which checks apply and which APIs are available for fixes.
 
 ```bash
-# Angular version
+# Angular version (determines which APIs are available)
 cat package.json | grep '"@angular/core"'
 
-# Zone mode: if zone.js appears in polyfills, the app is zone-based
+# Zone mode: if zone.js appears here, the app is zone-based
 grep -A5 '"polyfills"' angular.json
+
+# Change detection strategy adoption
+echo "Without OnPush:"; grep -rL "OnPush" src/app --include="*.ts" | grep "\.component\.ts$" | wc -l
+echo "With OnPush:"; grep -rl "OnPush" src/app --include="*.ts" | grep "\.component\.ts$" | wc -l
 ```
 
-| Version | Change detection default | Zone mode |
-|---------|--------------------------|-----------|
-| v20 and earlier | Default (full tree check) | Zone-based |
-| v21 | Default (full tree check) | Zoneless (new projects) |
-| v22+ | OnPush | Zoneless |
-
-Record the version before proceeding — it determines which checks in Phase 2 and Phase 4 apply.
+Record: Angular version, zone-based or zoneless, and OnPush adoption rate. These drive the diagnostic paths in Phase 2 and Phase 4.
 
 ### Phase 1 — Measure
 
@@ -62,10 +60,10 @@ Read [audit-cwv.md](references/audit-cwv.md) → LCP section.
 
 **INP > 200 ms**
 - Heavy synchronous event handlers? → Profile with DevTools, yield to scheduler
-- v20 and earlier — Default CD on most components? → Audit for `OnPush`
-- v20 and earlier — Third-party libraries triggering unexpected CD? → `runOutsideAngular`
-- v20 and earlier — Zone-based app? → Evaluate migration to zoneless
-- v22+ — OnPush is the default; audit for signals anti-patterns instead
+- Zone-based app — Most components using Default CD? → Add `OnPush` (available in all versions)
+- Zone-based app — Third-party libraries triggering unexpected CD? → `runOutsideAngular`
+- Zone-based app? → Consider migrating to zoneless
+- Signals read after `await` in effects? → Move reads before the async boundary
 
 Read [audit-rendering.md](references/audit-rendering.md).
 
@@ -97,8 +95,7 @@ Look for:
 Read [audit-rendering.md](references/audit-rendering.md).
 
 - Open Angular DevTools → Profiler → record an interaction
-- v20 and earlier — List components with Default change detection strategy
-- v22+ — OnPush is the default; skip the Default strategy search
+- If zone-based: list components with Default change detection strategy
 - Identify `effect()` calls that should be `computed()`
 - Find subscriptions missing `takeUntilDestroyed()`
 

@@ -21,24 +21,18 @@ The profiler shows:
 A healthy interaction: 1–3 components checked, each < 2 ms.  
 A problematic interaction: 50+ components checked, total > 16 ms.
 
-## Identifying Components with Suboptimal Change Detection
+## Change Detection Strategy
 
-### v22+ — OnPush is the default
+`OnPush` is available in all Angular versions. When most components use the Default strategy, every user interaction triggers a full component-tree check — the primary source of INP regressions in Angular apps.
 
-From v22, `OnPush` is the default CD strategy. Components re-render only when inputs change, signals update, or events fire within them. There is no need to audit for missing `OnPush` declarations.
-
-Focus instead on signals anti-patterns that undermine reactivity: effects used for state propagation, and signals read after async boundaries (see sections below).
-
-### v20 and earlier — Audit for OnPush
-
-In zone-based Angular apps (v20 and earlier), the default CD strategy checks the entire component tree on every event. Search for components that have not opted in to `OnPush`:
+### Audit current adoption
 
 ```bash
-# Find components that do NOT have OnPush
-grep -rL "OnPush" src/app --include="*.ts" | grep "\.component\.ts$"
+echo "Without OnPush:"; grep -rL "OnPush" src/app --include="*.ts" | grep "\.component\.ts$" | wc -l
+echo "With OnPush:"; grep -rl "OnPush" src/app --include="*.ts" | grep "\.component\.ts$" | wc -l
 ```
 
-This lists component files that never reference `OnPush`. Cross-reference with the DevTools profiler to prioritize which ones cause the most CD work.
+If the majority of components lack `OnPush`, cross-reference with the DevTools profiler to prioritize which ones cause the most CD work.
 
 ```ts
 import { ChangeDetectionStrategy, Component } from '@angular/core';
@@ -98,7 +92,7 @@ ngOnInit() {
 
 ## Third-Party Code and Zone.js
 
-> **Zone-based apps only (v20 and earlier).** From v21, new Angular projects are zoneless by default and Zone.js is absent. This section does not apply to v21+ applications.
+> **Zone-based apps only.** If `zone.js` is absent from the `polyfills` in `angular.json`, skip this section.
 
 Libraries that register their own event listeners (maps, charts, WebSocket clients, analytics) run inside Angular's zone by default, triggering change detection on every event.
 
@@ -125,19 +119,24 @@ export class MapComponent implements AfterViewInit {
 }
 ```
 
-## Migrating to Zoneless Angular
+## Opting into Zoneless Angular
 
-> **Applies to v20 and earlier.** From v21, new Angular projects are zoneless by default. This section covers migrating an existing zone-based app.
+> **Zone-based apps only.** If the app already runs without Zone.js, skip this section.
 
-Zoneless Angular eliminates Zone.js overhead entirely. The stable API is available from v19:
+Zoneless Angular eliminates Zone.js overhead entirely. Check the Angular version in Phase 0 to confirm which API applies:
 
 ```ts
 // app.config.ts
+
+// Use the API that matches the version detected in Phase 0:
+// provideZonelessChangeDetection()            — stable API
+// provideExperimentalZonelessChangeDetection() — pre-stable API (older versions)
+
 import { provideZonelessChangeDetection } from '@angular/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZonelessChangeDetection()  // stable from v19; default in new projects from v21
+    provideZonelessChangeDetection()
   ]
 };
 ```
