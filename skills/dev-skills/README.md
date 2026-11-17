@@ -6,6 +6,7 @@ The Angular skills are designed to help coding agents create applications aligne
 
 - **`angular-developer`**: Generates Angular code and provides architectural guidance. Useful for creating components, services, HTTP communication, or obtaining best practices on reactivity (signals, linkedSignal, resource, httpResource), queries and content projection, forms, dependency injection, routing, SSR, accessibility (ARIA), animations, styling, testing, or CLI tooling.
 - **`angular-new-app`**: Creates a new Angular app using the Angular CLI. Provides important guidelines for effectively setting up and structuring a modern Angular application.
+- **`angular-performance-audit`**: Audits existing Angular applications for performance. Measures Core Web Vitals first, then diagnoses LCP, INP, and CLS regressions, bundle size issues, change detection inefficiencies, and network loading problems, and produces a prioritized findings report with fixes.
 
 ## Using Agent Skills
 
